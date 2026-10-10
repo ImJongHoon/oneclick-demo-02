@@ -20,3 +20,4 @@ OneClick의 DB 배포 시연용 앱입니다. 방문할 때마다 Postgres에 �
 | `needs-env` | compose에 `API_KEY` 필요 | 주황 v4, API_KEY "설정됨" |
 | `crash-on-start` | 시작하자마자 종료 | (배포 실패, 기존 버전 유지) |
 | `broken-build` | 없는 파일을 COPY하는 Dockerfile | (GitHub Actions 빌드 실패) |
+| `load` | "부하 주기" 버튼 (20초 동안 CPU 코어마다 계산 + 메모리 300MB) | 빨강 v5, 서버 화면의 CPU 그래프가 치솟음 |
