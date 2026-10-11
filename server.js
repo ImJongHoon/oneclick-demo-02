@@ -6,8 +6,8 @@ const net = require("node:net");
 const os = require("node:os");
 const { Pool } = require("pg");
 
-const VERSION = "v1";
-const COLOR = "#0071e3";
+const VERSION = "v4";
+const COLOR = "#ff9500";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // DB가 앱보다 늦게 뜰 수 있으므로 연결될 때까지 기다리고, 테이블은 앱이 시작할 때 직접 만든다 (마이그레이션)
