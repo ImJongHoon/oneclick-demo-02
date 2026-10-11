@@ -5,8 +5,10 @@ services:
       - 3000:3000
     environment:
       DATABASE_URL: postgres://app:${POSTGRES_PASSWORD}@db:5432/app
+      REDIS_URL: redis://cache:6379
     depends_on:
       - db
+      - cache
   db:
     image: postgres:17-alpine
     environment:
@@ -15,5 +17,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+  cache:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
 volumes:
   pgdata: {}
+  redisdata: {}
