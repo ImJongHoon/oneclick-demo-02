@@ -6,7 +6,9 @@ const net = require("node:net");
 const os = require("node:os");
 const { Pool } = require("pg");
 
-const VERSION = "v1";
+const VERSION = "crash";
+console.error("crash-on-start: 시작하자마자 종료합니다");
+process.exit(1);
 const COLOR = "#0071e3";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
