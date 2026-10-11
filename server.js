@@ -4,10 +4,11 @@
 const http = require("node:http");
 const net = require("node:net");
 const os = require("node:os");
+const { Worker } = require("node:worker_threads");
 const { Pool } = require("pg");
 
-const VERSION = "v1";
-const COLOR = "#0071e3";
+const VERSION = "v5";
+const COLOR = "#d70015";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // DB가 앱보다 늦게 뜰 수 있으므로 연결될 때까지 기다리고, 테이블은 앱이 시작할 때 직접 만든다 (마이그레이션)
@@ -23,6 +24,24 @@ async function prepareDatabase() {
     }
   }
   throw new Error("database did not become ready");
+}
+
+// 시연용 부하 (서버 자원 시각화): 20초 동안 CPU 코어마다 계산 + 메모리 300MB를 잡는다.
+// 계산은 워커 스레드에서 해서 앱은 계속 응답한다 (감시 루프가 장애로 오판하지 않게)
+const LOAD_MS = 20_000;
+const BURN = "const end = Date.now() + require('node:worker_threads').workerData; while (Date.now() < end) Math.sqrt(Math.random());";
+let loadUntil = 0;
+let ballast = null;
+
+function startLoad() {
+  if (loadUntil > Date.now()) return;
+  loadUntil = Date.now() + LOAD_MS;
+  ballast = Buffer.alloc(300 * 1024 * 1024, 1);
+  for (let i = 0; i < os.availableParallelism(); i += 1) new Worker(BURN, { eval: true, workerData: LOAD_MS });
+  setTimeout(() => {
+    ballast = null;
+  }, LOAD_MS);
+  console.log(`load started: ${os.availableParallelism()} workers, 300MB for ${LOAD_MS / 1000}s`);
 }
 
 /** REDIS_URL이 있으면 캐시 서버에 닿는지만 확인한다 (의존성 없이 TCP 연결) */
@@ -48,12 +67,21 @@ const page = ({ count, cache }) => `<!doctype html>
   <h1 style="font-size:96px;margin:0">${count}</h1>
   <p style="font-size:20px;opacity:.85">총 방문 수 · ${VERSION} · ${os.hostname()}</p>
   <p style="font-size:16px;opacity:.75">캐시(Redis): ${cache} · API_KEY: ${process.env.API_KEY ? "설정됨" : "없음"}</p>
+  <form method="post" action="/load" style="margin-top:24px">
+    <button style="font-size:18px;padding:12px 24px;border:0;border-radius:999px;background:#fff;color:${COLOR};cursor:pointer">
+      ${loadUntil > Date.now() ? `부하 주는 중… (${Math.ceil((loadUntil - Date.now()) / 1000)}초 남음)` : "부하 주기 (20초)"}
+    </button>
+  </form>
 </body>
 </html>`;
 
 const server = http.createServer(async (request, response) => {
   try {
     if (request.url === "/favicon.ico") return response.writeHead(204).end();
+    if (request.method === "POST" && request.url === "/load") {
+      startLoad();
+      return response.writeHead(303, { Location: "/" }).end();
+    }
     await pool.query("INSERT INTO visits (version) VALUES ($1)", [VERSION]);
     const { rows } = await pool.query("SELECT count(*)::int AS count FROM visits");
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "X-App-Version": VERSION, "Cache-Control": "no-store" });
