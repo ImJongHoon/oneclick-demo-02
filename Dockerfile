@@ -1,17 +1,10 @@
 FROM node:22-bookworm-slim
-
-ENV NODE_ENV=production \
-    PORT=3000
-
 WORKDIR /app
-
-COPY --chown=node:node package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
-
-COPY --chown=node:node server.js ./
-
+ENV NODE_ENV=production
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+# 일부러 없는 파일을 복사해 빌드를 실패시킨다 (빌드 실패 감지·AI 수정 시연용)
+COPY server.js does-not-exist.txt ./
 USER node
-
 EXPOSE 3000
-
 CMD ["node", "server.js"]
